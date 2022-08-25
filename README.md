@@ -5,7 +5,7 @@ Ok, so this setup assumes that you're running **Fedora 36** and want to compile 
 \
 **ensure these packages are installed**
 ```
-dnf install podman python3-podman python3-pydbus python3-termcolor   
+dnf install podman python3-podman python3-termcolor   
 ```
 \
 **build and install cemu**
