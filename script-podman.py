@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import argparse
-import dbus
 import os
 import rpm
 import selinux
@@ -57,24 +56,6 @@ def check_podman_installed():
         sys.exit(1)
 
 
-def ensure_podman_socket_running():
-    if os.geteuid() == 0:
-        bus = dbus.SystemBus()
-    else:
-        bus = dbus.SessionBus()
-
-    systemd = bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-    manager = dbus.Interface(systemd, 'org.freedesktop.systemd1.Manager')
-    service = 'podman.socket'
-
-    try:
-       manager.RestartUnit(service, 'fail')
-    except:
-       cprint('Error: Failed to start {}.'.format(service), 'red')
-       cprint('Exiting...', 'red')
-       sys.exit(2)
-
-
 def ensure_image_exists():
     cprint('{0:.<70}'.format('PODMAN: checking if image exists'), 'yellow', end='')
     podman_image = client.images.list(filters = {'reference' : podman_image_name})
@@ -98,7 +79,7 @@ def ensure_image_exists():
         if cmd_output.returncode != 0:
             print_failure()
             cprint('Exiting...', 'red')
-            sys.exit(3)
+            sys.exit(2)
         else:
             print_success()
 
@@ -190,7 +171,7 @@ def set_selinux_context_t():
         if ret < 0:
             print_failure()
             cprint(f'selinux.getfilecon({element_path}) failed....exiting', red)
-            sys.exit(4)
+            sys.exit(3)
 
         element_context_t = element_context.split(":")[2]
         if element_context_t != container_context_t:
@@ -250,9 +231,7 @@ if __name__ == "__main__":
                         default=False)
 
     args = parser.parse_args()
-
     check_podman_installed()
-    ensure_podman_socket_running()
 
     if os.geteuid() == 0:
         client = PodmanClient(base_url='unix:/run/podman/podman.sock')
