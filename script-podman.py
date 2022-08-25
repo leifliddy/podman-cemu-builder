@@ -179,28 +179,30 @@ def ensure_container_stopped_removed(remove_container=True):
 
 def set_selinux_context_t():
     cprint('{0:.<70}'.format('PODMAN: selinux label check'), 'yellow', end='')
-    mount_dirs = ['output', 'build.scripts',]
+    mount_dirs_and_files = ['output', 'build.scripts', 'build.scripts/01-build.cemu.sh']
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     container_context_t = 'container_file_t'
 
-    for mount_dir in mount_dirs:
-        dir_path = f'{cur_dir}/{mount_dir}'
-        ret, mount_dir_context = selinux.getfilecon(dir_path)
+    for element in mount_dirs_and_files:
+        element_path = f'{cur_dir}/{element}'
+        ret, element_context = selinux.getfilecon(element_path)
 
         if ret < 0:
             print_failure()
-            cprint(f'selinux.getfilecon({dir_path}) failed....exiting', red)
+            cprint(f'selinux.getfilecon({element_path}) failed....exiting', red)
             sys.exit(4)
 
-        mount_dir_context_t = mount_dir_context.split(":")[2]
-        if mount_dir_context_t != container_context_t:
-            mount_dir_context = mount_dir_context.replace(mount_dir_context_t, container_context_t)
-            selinux.setfilecon(dir_path, mount_dir_context)
+        element_context_t = element_context.split(":")[2]
+        if element_context_t != container_context_t:
+            element_context = element_context.replace(element_context_t, container_context_t)
+            selinux.setfilecon(element_path, element_context)
 
     print_yes()
 
 def run_container():
-    # ensure ./output and ./files have the container_file_t label set
+    # ensure ./output and ./build.scripts have the container_file_t label set
+    if selinux.is_selinux_enabled():
+        set_selinux_context_t()
     set_selinux_context_t()
     cprint('PODMAN: run container...', 'yellow')
     bind_volumes          = []
