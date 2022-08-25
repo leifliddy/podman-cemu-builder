@@ -184,7 +184,7 @@ def run_container():
     # ensure ./output and ./build.scripts have the container_file_t label set
     if selinux.is_selinux_enabled():
         set_selinux_context_t()
-    set_selinux_context_t()
+
     cprint('PODMAN: run container...', 'yellow')
     bind_volumes          = []
     cur_dir               = os.path.dirname(os.path.realpath(__file__))
