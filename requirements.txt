@@ -1,3 +1,2 @@
-dbus-python
 podman
 termcolor
