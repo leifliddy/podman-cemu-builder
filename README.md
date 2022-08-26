@@ -50,5 +50,5 @@ options:
   --rerun           remove the container if it exists, then (re-)run it
   --rm_image        remove podman image and container if they exist
   --rm_container    remove container if it exists
-  --stop_container  stop podman container it exists and is running
+  --stop_container  stop podman container if it exists and is running
 ```
