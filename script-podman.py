@@ -260,4 +260,4 @@ if __name__ == "__main__":
 
     ensure_container_exists_and_running()
     cprint('PODMAN: to login to the container run:', 'yellow')
-    cprint('podman exec -it {} /bin/bash\n'.format(podman_container_name), 'green')
+    cprint(f'podman exec -it {podman_container_name} /bin/bash\n', 'green')
