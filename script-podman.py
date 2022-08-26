@@ -14,7 +14,6 @@ from termcolor import cprint
 podman_image_name     = 'cemu_build_env'
 podman_container_name = 'cemu_builder'
 container_hostname    = 'cemu_builder'
-container_script      = '/root/scripts/01-build.cemu.sh'
 
 
 def print_yes():
