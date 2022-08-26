@@ -6,4 +6,4 @@ cmake .. -DCMAKE_BUILD_TYPE=debug -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_
 ninja
 popd
 strip /root/cemu/bin/Cemu
-rsync -avr --delete /root/cemu/bin/ /output/
+rsync -vr --delete --exclude='.gitignore' /root/cemu/bin/ /output/
