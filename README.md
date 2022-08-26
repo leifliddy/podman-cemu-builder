@@ -18,7 +18,7 @@ systemctl --user enable --now podman.socket
 systemctl enable --now podman.socket
 ```
 
-**build and install cemu**
+**build cemu**
 ```
 git clone https://github.com/leifliddy/podman-cemu-build.git
 cd podman-cemu-build  
