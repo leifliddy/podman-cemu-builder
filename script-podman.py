@@ -14,6 +14,8 @@ from termcolor import cprint
 image_name          = 'cemu_build_env'
 container_name      = 'cemu_builder'
 container_hostname  = 'cemu_builder'
+container_script    = '/root/scripts/01-build.cemu.sh'
+cur_dir             = os.path.dirname(os.path.realpath(__file__))
 
 
 def print_yes():
@@ -34,6 +36,11 @@ def print_success():
 
 def print_failure():
     cprint(' [FAILURE]', 'red')
+
+
+def print_debug(msg, cmd):
+    cprint(f'DEBUG: {msg}:', 'yellow')
+    cprint(f'{cmd}\n', 'yellow', attrs=['bold'])
 
 
 def check_podman_installed():
@@ -75,8 +82,8 @@ def ensure_podman_socket_running():
     cmd_output = subprocess.run(cmd, capture_output=True, universal_newlines=True)
 
     if args.debug:
-        cprint('DEBUG: running command:', 'yellow')
-        cprint(f'{cmd_str}', 'yellow', attrs=['bold'])
+        print_debug('to manually start podman.socket', podman_cmd_str)
+        cprint('DEBUG: to manually start podman.socket:', cmd_str)
 
     if cmd_output.returncode != 0:
         err_output = cmd_output.stderr.rstrip()
@@ -93,15 +100,16 @@ def ensure_image_exists():
     else:
         print_soft_no()
         cprint('PODMAN: building image...', 'yellow')
-        cur_dir = os.path.dirname(os.path.realpath(__file__))
+        # using the api function will hide the build process
+        # use subprocess so we can see it in real-time
+        # client.images.build(path=cur_dir, tag=image_name, squash=True, rm=True)
+        podman_cmd_str = f'podman build --squash -t {image_name} {cur_dir}'
+        podman_cmd = podman_cmd_str.split()
 
         if args.debug:
-            podman_build_image_manual = f'podman build --squash -t {image_name} .'
-            cprint('DEBUG: to manually build the image:', 'yellow')
-            cprint(f'{podman_build_image_manual}', 'yellow', attrs=['bold'])
+            print_debug('to manually build the image', podman_cmd_str)
 
-        cmd_output = subprocess.run(['podman', 'build', '--squash', '-t', image_name, cur_dir], universal_newlines=True)
-
+        cmd_output = subprocess.run(podman_cmd, universal_newlines=True)
         cprint('{0:.<70}'.format('PODMAN: build image'), 'yellow', end='')
 
         if cmd_output.returncode != 0:
@@ -124,7 +132,7 @@ def ensure_image_removed():
         print_soft_no()
 
 
-def ensure_container_exists_and_running():
+def ensure_container_exists_and_running(interactive):
     cprint('{0:.<70}'.format('PODMAN: checking if container exists'), 'yellow', end='')
     container_exists = client.containers.list(all=True, filters = {'name' : container_name})
 
@@ -137,15 +145,19 @@ def ensure_container_exists_and_running():
 
         if container_status == 'running':
             print_yes()
+            return
         else:
             print_soft_no()
             cprint('PODMAN: starting container...', 'yellow')
+            if args.debug:
+                print_debug('to manually start the container', f'podman start {container_name}')
             podman_container.start()
-            ensure_container_exists_and_running()
+            ensure_container_exists_and_running(interactive)
     else:
         print_soft_no()
-        run_container()
-        ensure_container_exists_and_running()
+        run_container(interactive)
+        if interactive:
+            ensure_container_exists_and_running(interactive)
 
 
 def create_mounts_dict(host_mount, container_mount):
@@ -172,23 +184,27 @@ def ensure_container_stopped_removed(remove_container=True):
         if container_status != 'exited':
             print_yes()
             cprint('PODMAN: stopping container...', 'yellow')
+            if args.debug:
+                print_debug('to manually stop the container', f'podman stop {container_name}')
             podman_container.stop()
             if remove_container:
-                time.sleep(3)
+                # in the event that auto-remove is set the container may already be deleted
+                ensure_container_stopped_removed(remove_container)
+                return
         else:
             print_soft_no()
 
         if remove_container:
             cprint('PODMAN: removing container...', 'yellow')
+            if args.debug:
+                print_debug('to manually remove the container', f'podman rm {container_name}')
             podman_container.remove()
-
     else:
         print_soft_no()
 
 
 def set_selinux_context_t(mount_dirs, recursive=False):
     cprint('{0:.<70}'.format('PODMAN: selinux label check'), 'yellow', end='')
-    cur_dir = os.path.dirname(os.path.realpath(__file__))
     container_context_t = 'container_file_t'
     dir_file_paths = []
 
@@ -220,14 +236,13 @@ def set_selinux_context_t(mount_dirs, recursive=False):
     print_yes()
 
 
-def run_container():
+def run_container(interactive):
     cprint('PODMAN: run container...', 'yellow')
-    bind_volumes           = []
-    cur_dir                = os.path.dirname(os.path.realpath(__file__))
-    scripts_dir_host       = f'{cur_dir}/build.scripts'
-    scripts_dir_container  = '/root/scripts'
-    output_dir_host        = f'{cur_dir}/output'
-    output_dir_container   = '/output'
+    bind_volumes            = []
+    scripts_dir_host        = f'{cur_dir}/build.scripts'
+    scripts_dir_container   = '/root/scripts'
+    output_dir_host         = f'{cur_dir}/output'
+    output_dir_container    = '/output'
 
     bind_volumes.append(create_mounts_dict(scripts_dir_host, scripts_dir_container))
     bind_volumes.append(create_mounts_dict(output_dir_host, output_dir_container))
@@ -237,12 +252,33 @@ def run_container():
     if selinux.is_selinux_enabled():
         set_selinux_context_t(mount_dirs, recursive=True)
 
-    if args.debug:
-        podman_run_cmd_manual = f'podman run -d -it -v {scripts_dir_host}:{scripts_dir_container} -v {output_dir_host}:{output_dir_container} -h {container_hostname} --name {container_name} {image_name}\n'
-        cprint('DEBUG: to manually run the container:', 'yellow')
-        cprint(f'{podman_run_cmd_manual}', 'yellow', attrs=['bold'])
+    if interactive:
+        if args.debug:
+            podman_cmd_str = f'podman run -d -it -v {scripts_dir_host}:{scripts_dir_container} -v {output_dir_host}:{output_dir_container} \
+                                                                              -h {container_hostname} --name {container_name} {image_name}'
+            print_debug('to manually run the container', podman_cmd_str)
 
-    client.containers.run(image=image_name, name=container_name, hostname=container_hostname, detach=True, tty=True, privileged=False, mounts=bind_volumes)
+        client.containers.run(image=image_name, name=container_name, hostname=container_hostname, detach=True, tty=True, mounts=bind_volumes)
+
+    else:
+        if args.debug:
+            podman_cmd_str = f'podman run -it --rm -v {scripts_dir_host}:{scripts_dir_container} -v {output_dir_host}:{output_dir_container} \
+                                                             -h {container_hostname} --name {container_name} {image_name} {container_script}'
+            podman_cmd = podman_cmd_str.split()
+            print_debug('to manually run the container', podman_cmd_str)
+        cprint(f'PODMAN: running command {container_script}', 'yellow')
+        # using the api function will hide the script output
+        # use subprocess so we can see it in real-time
+        # client.containers.run(image=image_name, name=container_name, hostname=container_hostname, detach=True, auto_remove=True, mounts=bind_volumes, command=container_script)
+        cmd_output = subprocess.run(podman_cmd, universal_newlines=True)
+        cprint('{0:.<70}'.format(f'PODMAN: running {container_script}'), 'yellow', end='')
+
+        if cmd_output.returncode != 0:
+            print_failure()
+            cprint('Exiting...', 'red')
+            sys.exit(5)
+        else:
+            print_success()
 
 
 if __name__ == "__main__":
@@ -250,6 +286,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
 
+    parser.add_argument('--auto',
+                        action='store_true',
+                        help='ensure image is built, then run container_script in a non-interactive container',
+                        default=False)
     parser.add_argument('--debug',
                         action='store_true',
                         help='display debug messages',
@@ -261,7 +301,13 @@ if __name__ == "__main__":
                         default=False)
     group.add_argument('--rerun',
                         action='store_true',
-                        help='remove the containers if they exist, then (re-)run them',
+                        help='remove container if it exists, then (re-)run it'
+                             'then build (new) podman image and run container',
+                        default=False)
+    group.add_argument('--restart',
+                        action='store_true',
+                        help='stop the containers if they exist, then (re-)run them'
+                             'then build (new) podman image and run container',
                         default=False)
     group.add_argument('--rm_image',
                         action='store_true',
@@ -277,6 +323,8 @@ if __name__ == "__main__":
                         default=False)
 
     args = parser.parse_args()
+
+
     check_podman_installed()
     ensure_podman_socket_running()
 
@@ -284,6 +332,11 @@ if __name__ == "__main__":
         client = PodmanClient(base_url='unix:/run/podman/podman.sock')
     else:
         client = PodmanClient()
+
+    if args.auto:
+        interactive = False
+    else:
+        interactive = True
 
     if args.rm_image or args.rebuild:
         ensure_container_stopped_removed()
@@ -294,9 +347,13 @@ if __name__ == "__main__":
         ensure_container_stopped_removed()
         if args.rm_container: sys.exit()
 
-    if args.stop_container:
+    if args.stop_container or args.restart:
         ensure_container_stopped_removed(remove_container=False)
-        sys.exit()
+        if args.stop_container: sys.exit()
+
+    if not interactive and not args.rebuild:
+        ensure_container_stopped_removed()
+
 
     cprint('{0:.<70}'.format('PODMAN: image name'), 'yellow', end='')
     cprint(f' {image_name}', 'cyan')
@@ -306,6 +363,8 @@ if __name__ == "__main__":
     cprint('{0:.<70}'.format('PODMAN: container name'), 'yellow', end='')
     cprint(f' {container_name}', 'cyan')
 
-    ensure_container_exists_and_running()
-    cprint('PODMAN: to login to the container run:', 'yellow')
-    cprint(f'podman exec -it {container_name} /bin/bash\n', 'green')
+    ensure_container_exists_and_running(interactive)
+
+    if interactive:
+        cprint('PODMAN: to login to the container run:', 'yellow')
+        cprint(f'podman exec -it {container_name} /bin/bash\n', 'green')
