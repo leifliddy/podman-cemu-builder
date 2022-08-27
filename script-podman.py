@@ -55,6 +55,35 @@ def check_podman_installed():
         sys.exit(1)
 
 
+def ensure_podman_socket_running():
+    if os.geteuid() == 0:
+        user = ''
+    else:
+        user = '--user '
+
+    cmd_str = f'systemctl {user} is-active --quiet podman.socket'
+    cmd = cmd_str.split()
+    cmd_output = subprocess.run(cmd)
+
+    if cmd_output.returncode == 0:
+        return
+
+    cprint('PODMAN: starting podman.socket...', 'yellow')
+
+    cmd_str = f'systemctl {user}start podman.socket'
+    cmd = cmd_str.split()
+    cmd_output = subprocess.run(cmd, capture_output=True, universal_newlines=True)
+
+    if args.debug:
+        cprint('DEBUG: running command:', 'yellow')
+        cprint(f'{cmd_str}', 'yellow', attrs=['bold'])
+
+    if cmd_output.returncode != 0:
+        err_output = cmd_output.stderr.rstrip()
+        cprint(err_output, 'red', attrs=['bold'])
+        sys.exit(2)
+
+
 def ensure_image_exists():
     cprint('{0:.<70}'.format('PODMAN: checking if image exists'), 'yellow', end='')
     podman_image = client.images.list(filters = {'reference' : podman_image_name})
@@ -78,7 +107,7 @@ def ensure_image_exists():
         if cmd_output.returncode != 0:
             print_failure()
             cprint('Exiting...', 'red')
-            sys.exit(2)
+            sys.exit(3)
         else:
             print_success()
 
@@ -231,6 +260,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     check_podman_installed()
+    ensure_podman_socket_running()
 
     if os.geteuid() == 0:
         client = PodmanClient(base_url='unix:/run/podman/podman.sock')
