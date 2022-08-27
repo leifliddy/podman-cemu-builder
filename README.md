@@ -22,7 +22,7 @@ podman exec -it cemu_builder /bin/bash
 # once inside the container, run this script to build cemu
 /root/scripts/01-build.cemu.sh
 
-# the resulting Cemu binary will copied to the /output directory which is shared with the host system
+# the resulting Cemu binary will be copied to the /output directory which is shared with the host system
 
 # exit container
 Control+D or exit
