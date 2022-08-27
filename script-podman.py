@@ -302,12 +302,10 @@ if __name__ == "__main__":
     group.add_argument('--rerun',
                         action='store_true',
                         help='remove container if it exists, then (re-)run it'
-                             'then build (new) podman image and run container',
                         default=False)
     group.add_argument('--restart',
                         action='store_true',
-                        help='stop the containers if they exist, then (re-)run them'
-                             'then build (new) podman image and run container',
+                        help='stop the container if it exists, then (re-)run it'
                         default=False)
     group.add_argument('--rm_image',
                         action='store_true',
