@@ -11,9 +11,9 @@ from podman import PodmanClient
 from termcolor import cprint
 
 
-podman_image_name     = 'cemu_build_env'
-podman_container_name = 'cemu_builder'
-container_hostname    = 'cemu_builder'
+image_name          = 'cemu_build_env'
+container_name      = 'cemu_builder'
+container_hostname  = 'cemu_builder'
 
 
 def print_yes():
@@ -86,7 +86,7 @@ def ensure_podman_socket_running():
 
 def ensure_image_exists():
     cprint('{0:.<70}'.format('PODMAN: checking if image exists'), 'yellow', end='')
-    podman_image = client.images.list(filters = {'reference' : podman_image_name})
+    podman_image = client.images.list(filters = {'reference' : image_name})
 
     if podman_image:
         print_yes()
@@ -96,11 +96,11 @@ def ensure_image_exists():
         cur_dir = os.path.dirname(os.path.realpath(__file__))
 
         if args.debug:
-            podman_build_image_manual = f'podman build --squash -t {podman_image_name} .'
+            podman_build_image_manual = f'podman build --squash -t {image_name} .'
             cprint('DEBUG: to manually build the image:', 'yellow')
             cprint(f'{podman_build_image_manual}', 'yellow', attrs=['bold'])
 
-        cmd_output = subprocess.run(['podman', 'build', '--squash', '-t', podman_image_name, cur_dir], universal_newlines=True)
+        cmd_output = subprocess.run(['podman', 'build', '--squash', '-t', image_name, cur_dir], universal_newlines=True)
 
         cprint('{0:.<70}'.format('PODMAN: build image'), 'yellow', end='')
 
@@ -114,23 +114,23 @@ def ensure_image_exists():
 
 def ensure_image_removed():
     cprint('{0:.<70}'.format('PODMAN: checking if image exists'), 'yellow', end='')
-    podman_image_exists = client.images.list(filters = {'reference' : podman_image_name})
+    podman_image_exists = client.images.list(filters = {'reference' : image_name})
 
     if podman_image_exists:
         print_yes()
         cprint('PODMAN: removing image...', 'yellow')
-        client.images.remove(image=podman_image_name)
+        client.images.remove(image=image_name)
     else:
         print_soft_no()
 
 
 def ensure_container_exists_and_running():
     cprint('{0:.<70}'.format('PODMAN: checking if container exists'), 'yellow', end='')
-    container_exists = client.containers.list(all=True, filters = {'name' : podman_container_name})
+    container_exists = client.containers.list(all=True, filters = {'name' : container_name})
 
     if container_exists:
         print_yes()
-        podman_container = client.containers.get(podman_container_name)
+        podman_container = client.containers.get(container_name)
         container_status = podman_container.status
 
         cprint('{0:.<70}'.format('PODMAN: checking if container is running'), 'yellow', end='')
@@ -160,11 +160,11 @@ def create_mounts_dict(host_mount, container_mount):
 
 def ensure_container_stopped_removed(remove_container=True):
     cprint('{0:.<70}'.format('PODMAN: checking if container exists'), 'yellow', end='')
-    container_exists = client.containers.list(all=True, filters = {'name' : podman_container_name})
+    container_exists = client.containers.list(all=True, filters = {'name' : container_name})
 
     if container_exists:
         print_yes()
-        podman_container = client.containers.get(podman_container_name)
+        podman_container = client.containers.get(container_name)
         container_status = podman_container.status
 
         cprint('{0:.<70}'.format('PODMAN: checking if container is running'), 'yellow', end='')
@@ -186,45 +186,63 @@ def ensure_container_stopped_removed(remove_container=True):
         print_soft_no()
 
 
-def set_selinux_context_t():
+def set_selinux_context_t(mount_dirs, recursive=False):
     cprint('{0:.<70}'.format('PODMAN: selinux label check'), 'yellow', end='')
-    mount_dirs_and_files = ['output', 'build.scripts', 'build.scripts/01-build.cemu.sh']
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     container_context_t = 'container_file_t'
+    dir_file_paths = []
 
-    for element in mount_dirs_and_files:
-        element_path = f'{cur_dir}/{element}'
-        ret, element_context = selinux.getfilecon(element_path)
+    if not recursive:
+        dir_file_paths = mount_dirs
+    else:
+        for mount_dir in mount_dirs:
+            for dir_path, dirs, files in os.walk(mount_dir):
+                for filename in files:
+                    file_path = os.path.join(dir_path,filename)
+                    dir_file_paths.append(file_path)
+
+                dir_file_paths.append(dir_path)
+
+
+    for dir_file_path in dir_file_paths:
+        ret, mount_dir_context = selinux.getfilecon(dir_file_path)
 
         if ret < 0:
             print_failure()
-            cprint(f'selinux.getfilecon({element_path}) failed....exiting', red)
-            sys.exit(3)
+            cprint(f'selinux.getfilecon({dir_file_path}) failed....exiting', red)
+            sys.exit(4)
 
-        element_context_t = element_context.split(":")[2]
-        if element_context_t != container_context_t:
-            element_context = element_context.replace(element_context_t, container_context_t)
-            selinux.setfilecon(element_path, element_context)
+        mount_dir_context_t = mount_dir_context.split(':')[2]
+        if mount_dir_context_t != container_context_t:
+            mount_dir_context = mount_dir_context.replace(mount_dir_context_t, container_context_t)
+            selinux.setfilecon(dir_file_path, mount_dir_context)
 
     print_yes()
 
-def run_container():
-    # ensure ./output and ./build.scripts have the container_file_t label set
-    if selinux.is_selinux_enabled():
-        set_selinux_context_t()
 
+def run_container():
     cprint('PODMAN: run container...', 'yellow')
-    bind_volumes          = []
-    cur_dir               = os.path.dirname(os.path.realpath(__file__))
-    bind_volumes.append(create_mounts_dict(f'{cur_dir}/output', '/output'))
-    bind_volumes.append(create_mounts_dict(f'{cur_dir}/build.scripts', '/root/scripts'))
+    bind_volumes           = []
+    cur_dir                = os.path.dirname(os.path.realpath(__file__))
+    scripts_dir_host       = f'{cur_dir}/build.scripts'
+    scripts_dir_container  = '/root/scripts'
+    output_dir_host        = f'{cur_dir}/output'
+    output_dir_container   = '/output'
+
+    bind_volumes.append(create_mounts_dict(scripts_dir_host, scripts_dir_container))
+    bind_volumes.append(create_mounts_dict(output_dir_host, output_dir_container))
+
+    # ensure bind mounted directories have the container_file_t label set
+    mount_dirs = [scripts_dir_host, output_dir_host]
+    if selinux.is_selinux_enabled():
+        set_selinux_context_t(mount_dirs, recursive=True)
 
     if args.debug:
-        podman_run_cmd_manual = f'podman run -d -it -v $(pwd)/output:/output -v $(pwd)/build.scripts:/root/scripts -h {container_hostname} --name {podman_container_name} {podman_image_name}\n'
+        podman_run_cmd_manual = f'podman run -d -it -v {scripts_dir_host}:{scripts_dir_container} -v {output_dir_host}:{output_dir_container} -h {container_hostname} --name {container_name} {image_name}\n'
         cprint('DEBUG: to manually run the container:', 'yellow')
         cprint(f'{podman_run_cmd_manual}', 'yellow', attrs=['bold'])
 
-    client.containers.run(image=podman_image_name, name=podman_container_name, hostname=container_hostname, detach=True, tty=True, privileged=False, mounts=bind_volumes)
+    client.containers.run(image=image_name, name=container_name, hostname=container_hostname, detach=True, tty=True, privileged=False, mounts=bind_volumes)
 
 
 if __name__ == "__main__":
@@ -281,13 +299,13 @@ if __name__ == "__main__":
         sys.exit()
 
     cprint('{0:.<70}'.format('PODMAN: image name'), 'yellow', end='')
-    cprint(f' {podman_image_name}', 'cyan')
+    cprint(f' {image_name}', 'cyan')
 
     ensure_image_exists()
 
     cprint('{0:.<70}'.format('PODMAN: container name'), 'yellow', end='')
-    cprint(f' {podman_container_name}', 'cyan')
+    cprint(f' {container_name}', 'cyan')
 
     ensure_container_exists_and_running()
     cprint('PODMAN: to login to the container run:', 'yellow')
-    cprint(f'podman exec -it {podman_container_name} /bin/bash\n', 'green')
+    cprint(f'podman exec -it {container_name} /bin/bash\n', 'green')
