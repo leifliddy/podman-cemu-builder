@@ -8,16 +8,6 @@ Ok, so this setup assumes that you're running **Fedora 36** and want to compile 
 dnf install podman python3-podman python3-termcolor   
 ```
 
-**enable (and start) podman.socket**  
-if running the script as a normal user
-```
-systemctl --user enable --now podman.socket
-```
- if running the script as root (although there's no need to run this as root)
- ```
-systemctl enable --now podman.socket
-```
-
 **build cemu**
 ```
 git clone https://github.com/leifliddy/podman-cemu-build.git
