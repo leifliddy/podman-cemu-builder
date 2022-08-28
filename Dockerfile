@@ -11,6 +11,7 @@ RUN dnf update -y &&\
     mkdir /root/cemu &&\
     git clone --recursive https://github.com/cemu-project/Cemu /root/cemu
 
+# set login directory
 WORKDIR /root
 
 CMD ["/bin/bash"]
