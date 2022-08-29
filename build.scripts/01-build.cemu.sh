@@ -2,8 +2,8 @@
  
 mkdir -p /root/cemu/build
 pushd /root/cemu/build
-cmake .. -DCMAKE_BUILD_TYPE=debug -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -G Ninja -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja
-ninja
+cmake .. -DCMAKE_BUILD_TYPE=release -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ -G Ninja
+cmake --build .
 popd
 strip /root/cemu/bin/Cemu
 rsync -vr --delete --exclude='.gitignore' /root/cemu/bin/ /output/
