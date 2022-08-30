@@ -23,12 +23,12 @@ output_dir_host         = f'{cur_dir}/output'
 output_dir_container    = '/output'
 podman_vol_str          = f'-v {scripts_dir_host}:{scripts_dir_container} -v {output_dir_host}:{output_dir_container}'
 
+# ensure bind mounted directories have the container_file_t label set
+mount_dirs = [scripts_dir_host, output_dir_host]
+
 bind_volumes = []
 bind_volumes.append({'source': f'{scripts_dir_host}', 'target': f'{scripts_dir_container}', 'type': 'bind'})
 bind_volumes.append({'source': f'{output_dir_host}', 'target': f'{output_dir_container}', 'type': 'bind'})
-
-# ensure bind mounted directories have the container_file_t label set
-mount_dirs = [scripts_dir_host, output_dir_host]
 
 
 def print_yes():
