@@ -9,25 +9,9 @@ import sys
 from podman import PodmanClient
 from termcolor import cprint
 
-
-image_name          = 'cemu_build_env'
-container_name      = 'cemu_builder'
-container_hostname  = 'cemu_builder'
-container_script    = '/root/scripts/01-build.cemu.sh'
-
-cur_dir                 = os.path.dirname(os.path.realpath(__file__))
-scripts_dir_host        = f'{cur_dir}/build.scripts'
-scripts_dir_container   = '/root/scripts'
-output_dir_host         = f'{cur_dir}/output'
-output_dir_container    = '/output'
-podman_vol_str          = f'-v {scripts_dir_host}:{scripts_dir_container} -v {output_dir_host}:{output_dir_container}'
-
-# ensure bind mounted directories have the container_file_t label set
-mount_dirs = [scripts_dir_host, output_dir_host]
-
-bind_volumes = []
-bind_volumes.append({'source': f'{scripts_dir_host}', 'target': f'{scripts_dir_container}', 'type': 'bind'})
-bind_volumes.append({'source': f'{output_dir_host}', 'target': f'{output_dir_container}', 'type': 'bind'})
+# import podman variables from local file
+sys.dont_write_bytecode = True
+from podman_variables import *
 
 
 def print_yes():
@@ -210,9 +194,9 @@ def set_selinux_context_t(recursive=False):
     dir_file_paths = []
 
     if not recursive:
-        dir_file_paths = mount_dirs
+        dir_file_paths = mount_dirs_selinux
     else:
-        for mount_dir in mount_dirs:
+        for mount_dir in mount_dirs_selinux:
             for dir_path, dirs, files in os.walk(mount_dir):
                 for filename in files:
                     file_path = os.path.join(dir_path,filename)
