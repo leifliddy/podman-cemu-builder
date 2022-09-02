@@ -1,7 +1,8 @@
 # podman-cemu-build
 This project builds the cemu source from https://github.com/cemu-project/Cemu   
 \
-Ok, so this setup assumes that you're running **Fedora 36** and want to compile cemu   
+Ok, so this setup assumes that you're running **Fedora 37** and want to compile cemu   
+To build for Fedora 36, simply modify the first line in the ```Dockerfile```   
 \
 **ensure these packages are installed**
 ```
