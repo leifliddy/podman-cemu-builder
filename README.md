@@ -2,7 +2,7 @@
 This project builds the cemu source from https://github.com/cemu-project/Cemu   
 \
 Ok, so this setup assumes that you're running **Fedora 37** and want to compile cemu   
-To build for Fedora 36, simply modify the first line in the ```Dockerfile```   
+To build for Fedora 37, simply modify the first line in the ```Containerfile```   
 \
 **ensure these packages are installed**
 ```
