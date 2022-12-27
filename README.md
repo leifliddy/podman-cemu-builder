@@ -1,8 +1,5 @@
 # podman-cemu-build
-This project builds the cemu source from https://github.com/cemu-project/Cemu   
-\
-Ok, so this setup assumes that you're running **Fedora 37** and want to compile cemu   
-To build for Fedora 37, simply modify the first line in the ```Containerfile```   
+This project builds the cemu source https://github.com/cemu-project/Cemu on a **Fedora 37** podman container  
 \
 **ensure these packages are installed**
 ```
