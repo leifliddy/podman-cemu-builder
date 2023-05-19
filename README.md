@@ -1,5 +1,5 @@
 # podman-cemu-build
-This project builds the cemu source https://github.com/cemu-project/Cemu on a **Fedora 37** podman container  
+This project builds the cemu source https://github.com/cemu-project/Cemu on a **Fedora 38** podman container  
 \
 **ensure these packages are installed**
 ```
