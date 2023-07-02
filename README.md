@@ -20,6 +20,9 @@ podman exec -it cemu_builder /bin/bash
 # once inside the container, run this script to build cemu
 /root/scripts/01-build.cemu.sh
 
+# use the -r option to perform a clean build (will remove exisiting source dir and build Cemu from scratch)
+/root/scripts/01-build.cemu.sh -r
+
 # the resulting Cemu binary will be copied to the /output directory which is shared with the host system
 
 # exit container
