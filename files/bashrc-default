@@ -1,0 +1,4 @@
+alias vi='vim'
+alias sourceit='source ~/.bashrc'
+alias buildit='/root/scripts/01-build.cemu.sh -r'
+alias goout='cd /output'
