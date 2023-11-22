@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:38
+FROM registry.fedoraproject.org/fedora:39
 
 COPY files/bashrc /root/.bashrc
 COPY files/bashrc-default /root/.bashrc.d/default
