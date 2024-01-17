@@ -2,3 +2,7 @@ alias vi='vim'
 alias sourceit='source ~/.bashrc'
 alias buildit='/root/scripts/01-build.cemu.sh -r'
 alias goout='cd /output'
+
+findit() {
+  find . -type f | xargs grep $1
+}
