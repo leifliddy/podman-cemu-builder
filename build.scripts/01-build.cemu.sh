@@ -3,6 +3,7 @@
 set -e
 
 cemu_dir='/root/cemu'
+vcpkg_dir="$cemu_dir/dependencies/vcpkg"
 cemu_git_url='https://github.com/cemu-project/Cemu'
 
 while getopts :r arg
@@ -17,9 +18,10 @@ done
 
 [[ $rebuild = true ]] && git clone --recursive $cemu_git_url $cemu_dir
 
-# perform git pull
-pushd $cemu_dir
-git pull --recurse-submodules
+# perform vcpkg update
+pushd $vcpkg_dir
+git fetch --unshallow
+git pull origin master
 popd
 
 # remove build directory
