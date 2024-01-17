@@ -20,7 +20,7 @@ done
 
 # perform vcpkg update
 pushd $vcpkg_dir
-git fetch --unshallow
+git fetch --unshallow || true
 git pull origin master
 popd
 
