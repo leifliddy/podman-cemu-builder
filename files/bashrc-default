@@ -6,3 +6,11 @@ alias goout='cd /output'
 findit() {
   find . -type f | xargs grep $1
 }
+
+wp() {
+   dnf whatprovides "*$1*"
+}
+
+getp() {
+   rpm -qf $(which $1)
+}
